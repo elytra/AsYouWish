@@ -1,0 +1,121 @@
+buildscript {
+	repositories {
+		mavenCentral();
+		jcenter();
+		maven {
+			name = "forge";
+			url = "http://files.minecraftforge.net/maven";
+		}
+		maven {
+			name = "sonatype";
+			url = "https://oss.sonatype.org/content/repositories/snapshots/";
+		}
+		maven {
+			url "https://plugins.gradle.org/m2/";
+		}
+	}
+	dependencies {
+		classpath "net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT";
+		classpath "com.github.jengelman.gradle.plugins:shadow:2.0.0";
+		classpath "gradle.plugin.net.minecrell:licenser:0.3";
+	}
+}
+
+apply plugin: "java";
+apply plugin: "net.minecrell.licenser";
+apply plugin: "net.minecraftforge.gradle.forge";
+apply plugin: "com.github.johnrengelman.shadow";
+
+repositories {
+	maven {
+		url = "https://repo.elytradev.com";
+	}
+}
+
+
+def mc_version        = "1.12.2";
+def mc_shortversion   = "1.12";
+def concrete_version  = "0.3.6-SNAPSHOT";
+
+def concrete_modules  = ["common", "inventory", "recipe", "network", "reflect"];
+def project_package   = "com.elytradev.asyouwish";
+
+shadowJar {
+	classifier = "";
+	relocate "com.elytradev.concrete", "${project_package}.repackage.com.elytradev.concrete";
+	configurations = [project.configurations.shadow];
+}
+
+reobf {
+    shadowJar { mappingType = "SEARGE"; }
+}
+
+tasks.build.dependsOn reobfShadowJar;
+
+artifacts {
+    archives shadowJar;
+}
+
+dependencies {
+	for (String module : concrete_modules) {
+		shadow "com.elytradev.concrete:concrete-${module}:${concrete_version}";
+		compile "com.elytradev.concrete:concrete-${module}:${concrete_version}";
+	}
+}
+
+group = "com.elytradev";
+archivesBaseName = "AsYouWish";
+version = "MC1.12.2_ver1.0.0";
+
+sourceCompatibility = 1.8;
+targetCompatibility = 1.8;
+
+minecraft {
+	version = "1.12.2-14.23.2.2611";
+	mappings = "snapshot_20171130";
+
+	runDir = "minecraft";
+
+	replaceIn "src/main/java/com/elytradev/asyouwish/AsYouWish.java";
+	replace "@VERSION@", project.version;
+}
+
+processResources {
+	// this will ensure that this task is redone when the versions change.
+	inputs.property "version", project.version;
+	inputs.property "mcversion", project.minecraft.version;
+
+	// replace stuff in mcmod.info, nothing else
+	from(sourceSets.main.resources.srcDirs) {
+		include "mcmod.info";
+
+		// replace version and mcversion
+		expand "version":project.version, "mcversion":project.minecraft.version;
+	}
+
+	// copy everything else, thats not the mcmod.info
+	from(sourceSets.main.resources.srcDirs) {
+		exclude "mcmod.info";
+		exclude "*.xcf"; //Always exclude gimp source files.
+	}
+}
+
+license {
+	sourceSets = [project.sourceSets.main]
+
+    include '**/*.java';
+    
+    exclude "**/mcmod.info";
+	exclude "**/*.json";
+	exclude "**/*.png";
+	exclude "**/*.mcmeta";
+	exclude "**/*.ogg";
+	exclude "**/*.lang";
+	exclude "/src/main/resources/**";
+	//Should be covered by the above
+	exclude "**/*.mtl";
+	exclude "**/*.obj";
+
+	exclude "/doc/**";
+	exclude "/com/elytradev/concrete/**";
+}
